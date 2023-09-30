@@ -1,63 +1,32 @@
 #include <Arduino.h>
 
-// 养成良好习惯，被多进程和中断调用的变量使用 volatile 修饰符
-volatile uint32_t inventory = 100; //总库存
-volatile uint32_t retailCount = 0; //线下销售量
+#include <U8g2lib.h>
+#include <Wire.h>
 
+#define I2C_SDA  5
+#define I2C_SCL  6
 
-void retailTask(void *pvParam) {
-  while (1) {
-
-    //以下实现了带有随机延迟的 inventory减1；
-    //等效为 inventory--； retailCount++；
-    uint32_t inv = inventory;
-    for (int i; i < random(10, 100); i++) vTaskDelay(pdMS_TO_TICKS(i));
-    if (inventory > 0) {
-      inventory = inv - 1;
-      retailCount++;
-    }
-
-  };
-
-  vTaskDelay(10); //老板要求慢一些，客户升级后，可以再加快速度
-}
-
-
-
-void showTask(void *pvParam) {
-  while (1) {
-
-    printf("Inventory : %d\n", inventory);
-    printf("  Retail : %d\n", retailCount);
-
-
-    if (inventory == 0 ) {
-      printf("\n-----SALES SUMMARY-----\n");
-      printf("  Total Sales:  %d\n\n", retailCount);
-    }
-    vTaskDelay(pdMS_TO_TICKS(100));
+void oledTask(void * pvParam) {
+  U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE, /* I2C_SCL=*/ I2C_SCL, /* I2C_SDA=*/ I2C_SDA);
+  u8g2.begin();
+  u8g2.enableUTF8Print();//允许打印中文
+  for (;;) {
+    u8g2.clearBuffer();					// clear the internal memory
+    u8g2.setFont(u8g2_font_ncenB12_tr);	// choose a suitable font
+    u8g2.drawStr(15, 30, "LOVE  YOU");	// write something to the internal memory
+    u8g2.setFont(u8g2_font_wqy14_t_gb2312b);//切换中文字体
+    u8g2.drawUTF8(40,50,"小毛毛");
+    u8g2.sendBuffer();					// transfer internal memory to the display
+    vTaskDelay(1000);
   }
 }
 
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
+void setup() { //loopBack , Priority 1, Core 1
+  xTaskCreatePinnedToCore(oledTask, "OLED Task", 1024 * 6, NULL, 1, NULL, 1);
 
-  xTaskCreate(retailTask,
-              "Online Channel",
-              1024 * 4,
-              NULL,
-              1,
-              NULL);
-
-  xTaskCreate(showTask,
-              "Display Inventory",
-              1024 * 4,
-              NULL,
-              1,
-              NULL);
-
+  vTaskDelete(NULL);
 }
 
 void loop() {
+
 }
