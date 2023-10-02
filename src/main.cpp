@@ -44,6 +44,7 @@ void showStockTask(void *ptParam)
         // vTaskDelay(random(500, 2000));
         Serial.print("Stock Price : $");
         Serial.println(stockPrice);
+        Serial.println("毛浈茵");
     }
 }
 void setup()
